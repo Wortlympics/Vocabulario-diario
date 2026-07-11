@@ -1680,7 +1680,12 @@ async function cloudPush(fullData){
 }
 
 async function syncProfileToCloud(){
-  const cloudData = (await cloudFetch()) || {};
+  const cloudData = await cloudFetch();
+  if(cloudData === null){
+    // The download step failed (network issue, rate limit, etc.) — abort instead of
+    // pushing with an empty object, which would wipe out everyone else's data.
+    return false;
+  }
   cloudData[currentProfile] = {
     streak: streak.current,
     longest: streak.longest,
@@ -1694,7 +1699,7 @@ async function syncProfileToCloud(){
     mistakes: mistakes,
     updatedAt: new Date().toISOString(),
   };
-  await cloudPush(cloudData);
+  return await cloudPush(cloudData);
 }
 
 async function pullProfileFromCloud(){
@@ -2491,7 +2496,7 @@ async function renderSummary(){
   }
   streak.history[today] = (streak.history[today] || 0) + sessionTotal;
   await saveStreak(streak);
-  syncProfileToCloud(); // fire and forget — updates the shared bin so the other profile can see progress
+  syncProfileToCloud(); // fire and forget — if it fails, it just retries on the next completed session
 
   const shareText = `${PROFILES[currentProfile].name}: hoy llevo ${streak.current} día${streak.current===1?'':'s'} seguido${streak.current===1?'':'s'} aprendiendo alemán 🇩🇪 (${sessionCorrect}/${sessionTotal} tarjetas hoy)`;
   const isPerfect = sessionTotal > 0 && sessionCorrect === sessionTotal;
