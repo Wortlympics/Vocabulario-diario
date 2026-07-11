@@ -1131,11 +1131,17 @@ function renderModeSelect(){
   `;
   document.getElementById('welcomeToggle').onclick = () => {
     const el = document.getElementById('welcomeContent');
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    const other = document.getElementById('onboardingContent');
+    const opening = el.style.display === 'none';
+    el.style.display = opening ? 'block' : 'none';
+    if(opening) other.style.display = 'none';
   };
   document.getElementById('onboardingToggle').onclick = () => {
     const el = document.getElementById('onboardingContent');
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    const other = document.getElementById('welcomeContent');
+    const opening = el.style.display === 'none';
+    el.style.display = opening ? 'block' : 'none';
+    if(opening) other.style.display = 'none';
   };
   document.querySelectorAll('.landing-card').forEach(card => {
     card.onclick = () => renderPasswordGate(card.dataset.profile);
