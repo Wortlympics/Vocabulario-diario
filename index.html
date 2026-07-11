@@ -999,9 +999,12 @@ function renderRewardBar(masteredTotal){
     return `<div class="reward-icon ${unlocked ? 'unlocked' : ''}" style="left:${left}%;" data-reward-idx="${i}" data-unlocked="${unlocked}">${unlocked ? set.icon : '🔒'}</div>`;
   }).join('');
   const nextMilestone = rewards.find(r => masteredTotal < r.milestone);
+  const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
   const statusLine = nextMilestone
-    ? `🎁 Te faltan <b>${nextMilestone.milestone - masteredTotal}</b> palabras para la siguiente recompensa`
-    : `🎁 ¡Has desbloqueado todas las recompensas!`;
+    ? (useDE
+        ? `🎁 Noch <b>${nextMilestone.milestone - masteredTotal}</b> Wörter bis zur nächsten Belohnung`
+        : `🎁 Te faltan <b>${nextMilestone.milestone - masteredTotal}</b> palabras para la siguiente recompensa`)
+    : (useDE ? `🎁 Alle Belohnungen freigeschaltet!` : `🎁 ¡Has desbloqueado todas las recompensas!`);
   return `
     <div class="reward-bar-wrap">
       <div class="reward-bar-track"><div class="reward-bar-fill" style="width:${pct}%"></div></div>
@@ -1160,11 +1163,22 @@ function saveUserPassword(p, pw){
 function clearUserPassword(p){
   try{ localStorage.removeItem(`aleman_pw_${p}`); }catch(e){}
 }
+function isDeviceVerified(p){
+  try{ return localStorage.getItem(`aleman_pw_verified_${p}`) === 'true'; }catch(e){ return false; }
+}
+function markDeviceVerified(p){
+  try{ localStorage.setItem(`aleman_pw_verified_${p}`, 'true'); }catch(e){}
+}
+function forgetDeviceVerified(p){
+  try{ localStorage.removeItem(`aleman_pw_verified_${p}`); }catch(e){}
+}
 
 function renderPasswordGate(p){
   const existing = loadUserPassword(p);
   if(existing === null){
     renderPasswordSetup(p);
+  } else if(isDeviceVerified(p)){
+    goToProfile(p); // already unlocked once on this device, skip straight in
   } else {
     renderPasswordLogin(p, existing);
   }
@@ -1206,6 +1220,7 @@ function renderPasswordSetup(p){
       return;
     }
     saveUserPassword(p, pw1);
+    markDeviceVerified(p);
     goToProfile(p);
   };
 }
@@ -1232,6 +1247,7 @@ function renderPasswordLogin(p, correctPw){
   input.focus();
   const tryLogin = () => {
     if(input.value === correctPw){
+      markDeviceVerified(p);
       goToProfile(p);
     } else {
       document.getElementById('pwLoginError').style.display = 'block';
@@ -1244,6 +1260,7 @@ function renderPasswordLogin(p, correctPw){
   document.getElementById('pwCancelBtn2').onclick = renderModeSelect;
   document.getElementById('pwForgotBtn').onclick = () => {
     clearUserPassword(p);
+    forgetDeviceVerified(p);
     renderPasswordSetup(p);
   };
 }
@@ -1720,6 +1737,65 @@ let sessionTotal = 0;
 let currentFlipped = false;
 
 const ALL_CATEGORIES = [...new Set(DECK.map(c => c.cat))];
+const CATEGORY_DE = {
+  "Adjetivos — cualidades básicas": "Adjektive — Grundeigenschaften",
+  "Adjetivos — cualidades de la comida y objetos": "Adjektive — Eigenschaften von Essen und Gegenständen",
+  "Adjetivos — personalidad y estados de ánimo": "Adjektive — Persönlichkeit und Stimmung",
+  "Adjetivos — tiempo, cantidad y otros": "Adjektive — Zeit, Menge und Sonstiges",
+  "Adjetivos — valoración, opinión y calidad": "Adjektive — Bewertung, Meinung und Qualität",
+  "Adverbios de lugar y modo": "Adverbien für Ort und Art",
+  "Adverbios de tiempo": "Adverbien der Zeit",
+  "Arte, cultura y entretenimiento": "Kunst, Kultur und Unterhaltung",
+  "Casa y hogar": "Haus und Zuhause",
+  "Casa — objetos y cocina (ampliado)": "Haus — Gegenstände und Küche (erweitert)",
+  "Ciudad y edificios (ampliado)": "Stadt und Gebäude (erweitert)",
+  "Ciudad, lugares y transporte": "Stadt, Orte und Verkehr",
+  "Comida y bebida": "Essen und Trinken",
+  "Comida y bebida (ampliado)": "Essen und Trinken (erweitert)",
+  "Comunicación y correspondencia": "Kommunikation und Korrespondenz",
+  "Conectores y conjunciones (fluidez)": "Konnektoren und Konjunktionen (Sprachfluss)",
+  "Cuerpo y salud": "Körper und Gesundheit",
+  "Deporte y ocio": "Sport und Freizeit",
+  "Deportes y actividades específicas": "Bestimmte Sportarten und Aktivitäten",
+  "Educación": "Bildung",
+  "Emergencias y seguridad": "Notfälle und Sicherheit",
+  "Familia y personas": "Familie und Personen",
+  "Finanzas y banco": "Finanzen und Bank",
+  "Geografía y países": "Geografie und Länder",
+  "Locuciones y expresiones fijas": "Redewendungen und feste Ausdrücke",
+  "Materiales y ciencia": "Materialien und Wissenschaft",
+  "Naturaleza y animales (ampliado)": "Natur und Tiere (erweitert)",
+  "Naturaleza y clima": "Natur und Klima",
+  "Números, cantidad y medida": "Zahlen, Menge und Maß",
+  "Objetos y materiales comunes": "Alltägliche Gegenstände und Materialien",
+  "Objetos y vida cotidiana adicional": "Weitere Alltagsgegenstände",
+  "Partículas modales (para sonar natural)": "Modalpartikeln (für natürliches Deutsch)",
+  "Personalidad y carácter": "Persönlichkeit und Charakter",
+  "Preposiciones adicionales de uso frecuente": "Weitere häufige Präpositionen",
+  "Profesiones (ampliado)": "Berufe (erweitert)",
+  "Ropa y accesorios (ampliado)": "Kleidung und Accessoires (erweitert)",
+  "Ropa y compras": "Kleidung und Einkaufen",
+  "Sentimientos y conceptos abstractos": "Gefühle und abstrakte Begriffe",
+  "Sociedad y comunicación": "Gesellschaft und Kommunikation",
+  "Tecnología (ampliado)": "Technik (erweitert)",
+  "Tecnología y medios": "Technik und Medien",
+  "Tiempo y calendario": "Zeit und Kalender",
+  "Trabajo y profesiones": "Arbeit und Berufe",
+  "Trámites y vida práctica": "Behördengänge und Alltagsorganisation",
+  "Verbos como sustantivos y acciones": "Verben als Substantive und Handlungen",
+  "Verbos con preposición fija": "Verben mit fester Präposition",
+  "Verbos de percepción, comunicación y opinión": "Verben der Wahrnehmung, Kommunikation und Meinung",
+  "Verbos irregulares (fuertes) esenciales": "Wichtige unregelmäßige (starke) Verben",
+  "Verbos reflexivos comunes": "Häufige reflexive Verben",
+  "Verbos regulares de alta frecuencia": "Häufige regelmäßige Verben",
+  "Verbos separables e inseparables comunes": "Häufige trennbare und untrennbare Verben",
+  "Viajes (ampliado)": "Reisen (erweitert)",
+  "Vida diaria y rutina (ampliado)": "Alltag und Routine (erweitert)",
+  "Vocabulario adicional de alta frecuencia": "Weiterer häufiger Wortschatz",
+  "Vocabulario de opinión, matiz y argumentación": "Wortschatz für Meinung, Nuancen und Argumentation",
+  "Vocabulario final de repaso": "Abschließender Wiederholungswortschatz",
+  "Últimos complementos": "Letzte Ergänzungen",
+};
 let selectedCategories = null; // null = all
 const ALL_LEVELS = ["A1", "A2", "B1"];
 let selectedLevels = null; // null = all
@@ -1836,58 +1912,94 @@ function renderHome(){
     ? "Español → Alemán"
     : "Alemán → Español";
 
+  // Heiko and Ben are true Spanish beginners — their day-to-day screen is in German.
+  const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
+  const T = useDE ? {
+    backHome: "Zurück zum Start",
+    startBtn: "Übung starten",
+    quickBtn: "⚡ Schnellrunde (Multiple Choice)",
+    capMsg: `🧱 Du hast das Limit von ${IN_PROGRESS_CAP} Wörtern in Bearbeitung erreicht.<br>Festige zuerst, was du schon hast — komm zurück, wenn wieder etwas fällig ist.`,
+    doneMsg: `✅ Du hast heute alles wiederholt.<br>Bis morgen mit dem Kaffee.`,
+    streakLabel: "Serie",
+    dueLabel: "heute fällig",
+    inProgressLabel: "in Bearbeitung",
+    masteredLabel: "gemeistert",
+    pctComplete: (p, m, d) => `${p}% abgeschlossen (${m}/${d})`,
+    categories: "📂 Kategorien",
+    masteredList: (n) => `✅ Gemeisterte Wörter (${n})`,
+    mistakesTitle: (n) => `🔁 Du hast ${n} falsche${n===1?'s':''} Wort${n===1?'':'er'}`,
+    mistakesSub: "Übe sie extra, ohne auf die reguläre Wiederholung zu warten",
+    mistakesBtn: (n) => `Fehler wiederholen (${n})`,
+  } : {
+    backHome: "Volver a inicio",
+    startBtn: "Empezar repaso",
+    quickBtn: "⚡ Ronda rápida (opción múltiple)",
+    capMsg: `🧱 Has llegado al límite de ${IN_PROGRESS_CAP} palabras en progreso.<br>Consolida las que ya tienes antes de meter más nuevas — vuelve cuando toque repasar alguna.`,
+    doneMsg: `✅ Ya has repasado todo lo que tocaba hoy.<br>Vuelve mañana con el café.`,
+    streakLabel: "días seguidos",
+    dueLabel: "para hoy",
+    inProgressLabel: "en progreso",
+    masteredLabel: "dominadas",
+    pctComplete: (p, m, d) => `${p}% completo (${m}/${d})`,
+    categories: `📂 Categorías`,
+    masteredList: (n) => `✅ Palabras dominadas (${n})`,
+    mistakesTitle: (n) => `🔁 Tienes ${n} palabra${n===1?'':'s'} fallada${n===1?'':'s'}`,
+    mistakesSub: "Repásalas aparte, sin esperar a que le toque su turno normal",
+    mistakesBtn: (n) => `Repasar fallos (${n})`,
+  };
+
   app.innerHTML = `
     <div class="card-surface" style="padding-bottom:14px;">
       <div style="text-align:center; margin-bottom:12px;">
-        <button id="backToLandingBtn" title="Volver a inicio" style="background:none; border:none; color:var(--grey); font-size:1.3rem; padding:4px 10px; cursor:pointer; line-height:1;">🏠</button>
+        <button id="backToLandingBtn" title="${T.backHome}" style="background:none; border:none; color:var(--grey); font-size:1.3rem; padding:4px 10px; cursor:pointer; line-height:1;">🏠</button>
       </div>
       <div class="greeting"><span class="emoji">${g.emoji}</span><h1>${g.text}</h1></div>
 
       ${due.length > 0
-        ? `<button class="btn btn-primary" id="startBtn" style="margin-top:14px;">Empezar repaso</button>
-           <button class="btn btn-secondary" id="quickBtn" style="margin-top:10px;">⚡ Ronda rápida (opción múltiple)</button>`
+        ? `<button class="btn btn-primary" id="startBtn" style="margin-top:14px;">${T.startBtn}</button>
+           <button class="btn btn-secondary" id="quickBtn" style="margin-top:10px;">${T.quickBtn}</button>`
         : (inProgress >= IN_PROGRESS_CAP
-            ? `<div class="empty-state" style="margin-top:14px;">🧱 Has llegado al límite de ${IN_PROGRESS_CAP} palabras en progreso.<br>Consolida las que ya tienes antes de meter más nuevas — vuelve cuando toque repasar alguna.</div>`
-            : `<div class="empty-state" style="margin-top:14px;">✅ Ya has repasado todo lo que tocaba hoy.<br>Vuelve mañana con el café.</div>`)
+            ? `<div class="empty-state" style="margin-top:14px;">${T.capMsg}</div>`
+            : `<div class="empty-state" style="margin-top:14px;">${T.doneMsg}</div>`)
       }
 
       <div class="stat-row" style="margin-top:18px;">
         <div class="stat-box">
           <div class="stat-num"><span class="icon-flame">🔥</span>${streak.current}</div>
-          <div class="stat-label">días seguidos</div>
+          <div class="stat-label">${T.streakLabel}</div>
         </div>
         <div class="stat-box">
           <div class="stat-num">${due.length}</div>
-          <div class="stat-label">para hoy</div>
+          <div class="stat-label">${T.dueLabel}</div>
         </div>
       </div>
 
       <div class="stat-row">
         <div class="stat-box" style="background:#E6F1FB;">
           <div class="stat-num" style="color:#042C53;">${inProgress}</div>
-          <div class="stat-label" style="color:#185FA5;">en progreso</div>
+          <div class="stat-label" style="color:#185FA5;">${T.inProgressLabel}</div>
         </div>
         <div class="stat-box" style="background:#E1F5EE;">
           <div class="stat-num" style="color:#04342C;">${mastered}</div>
-          <div class="stat-label" style="color:#0F6E56;">dominadas</div>
+          <div class="stat-label" style="color:#0F6E56;">${T.masteredLabel}</div>
         </div>
       </div>
 
       <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
-      <div class="subtitle" style="margin-bottom:0;">${pct}% completo (${mastered}/${deckSize})</div>
+      <div class="subtitle" style="margin-bottom:0;">${T.pctComplete(pct, mastered, deckSize)}</div>
       ${REWARD_SETS[currentProfile] ? renderRewardBar(Object.values(progress).filter(s => s.box >= 4).length) : ''}
     </div>
 
     <div class="card-surface">
-      <button class="btn btn-outline" id="categoriesBtn" style="margin-bottom:10px;">📂 Categorías${catCount}</button>
-      <button class="btn btn-outline" id="masteredListBtn" style="margin-bottom:0;">✅ Palabras dominadas (${mastered})</button>
+      <button class="btn btn-outline" id="categoriesBtn" style="margin-bottom:10px;">${T.categories}${catCount}</button>
+      <button class="btn btn-outline" id="masteredListBtn" style="margin-bottom:0;">${T.masteredList(mastered)}</button>
     </div>
 
     ${mistakes.length > 0 ? `
     <div class="card-surface" style="background:#FBEAEA; box-shadow:none;">
-      <div style="font-weight:800; color:var(--red); margin-bottom:6px;">🔁 Tienes ${mistakes.length} palabra${mistakes.length===1?'':'s'} fallada${mistakes.length===1?'':'s'}</div>
-      <div class="subtitle" style="margin-bottom:12px;">Repásalas aparte, sin esperar a que le toque su turno normal</div>
-      <button class="btn btn-no" id="mistakesBtn" style="margin-bottom:0;">Repasar fallos (${mistakes.length})</button>
+      <div style="font-weight:800; color:var(--red); margin-bottom:6px;">${T.mistakesTitle(mistakes.length)}</div>
+      <div class="subtitle" style="margin-bottom:12px;">${T.mistakesSub}</div>
+      <button class="btn btn-no" id="mistakesBtn" style="margin-bottom:0;">${T.mistakesBtn(mistakes.length)}</button>
     </div>` : ''}
   `;
 
@@ -1972,13 +2084,30 @@ function renderMasteredWords(){
 function renderCategories(){
   const selected = selectedCategories || [...ALL_CATEGORIES];
   const selectedLvl = selectedLevels || [...ALL_LEVELS];
-  const LEVEL_NAMES = {A1: "A1 · Principiante", A2: "A2 · Elemental", B1: "B1 · Intermedio"};
+  const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
+  const T = useDE ? {
+    title: "Kategorien und Niveau wählen",
+    subtitle: `Nur die markierten werden bei ${PROFILES[currentProfile].name} geübt`,
+    levelLabel: "📊 Niveau",
+    catLabel: "📂 Kategorien",
+    selectAll: "Alle auswählen",
+    selectNone: "Keine",
+    save: "Speichern und zurück",
+  } : {
+    title: "Elige categorías y nivel",
+    subtitle: `Solo se incluirán en el repaso de ${PROFILES[currentProfile].name} las que marques`,
+    levelLabel: "📊 Nivel",
+    catLabel: "📂 Categorías",
+    selectAll: "Seleccionar todas",
+    selectNone: "Ninguna",
+    save: "Guardar y volver",
+  };
   app.innerHTML = `
     <div class="card-surface">
-      <h1 style="margin-bottom:4px;">Elige categorías y nivel</h1>
-      <div class="subtitle">Solo se incluirán en el repaso de ${PROFILES[currentProfile].name} las que marques</div>
+      <h1 style="margin-bottom:4px;">${T.title}</h1>
+      <div class="subtitle">${T.subtitle}</div>
 
-      <div style="margin-top:16px; margin-bottom:6px; font-weight:700; color:var(--brown); font-size:0.9rem;">📊 Nivel</div>
+      <div style="margin-top:16px; margin-bottom:6px; font-weight:700; color:var(--brown); font-size:0.9rem;">${T.levelLabel}</div>
       <div style="display:flex; gap:8px; margin-bottom:16px;">
         ${ALL_LEVELS.map(lvl => `
           <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px 6px; border-radius:12px; background:var(--cream2); font-size:0.85rem; cursor:pointer;">
@@ -1988,23 +2117,24 @@ function renderCategories(){
         `).join('')}
       </div>
 
-      <div style="font-weight:700; color:var(--brown); font-size:0.9rem; margin-bottom:6px;">📂 Categorías</div>
+      <div style="font-weight:700; color:var(--brown); font-size:0.9rem; margin-bottom:6px;">${T.catLabel}</div>
       <div class="btn-row" style="margin-bottom:14px;">
-        <button class="btn btn-secondary" id="selectAllBtn">Seleccionar todas</button>
-        <button class="btn btn-secondary" id="selectNoneBtn">Ninguna</button>
+        <button class="btn btn-secondary" id="selectAllBtn">${T.selectAll}</button>
+        <button class="btn btn-secondary" id="selectNoneBtn">${T.selectNone}</button>
       </div>
       <div id="catList" style="max-height:42vh; overflow-y:auto; margin-bottom:14px;">
         ${ALL_CATEGORIES.map(cat => {
           const {mastered, total} = categoryStats(cat);
+          const catLabel = useDE ? (CATEGORY_DE[cat] || cat) : cat;
           return `
           <label style="display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--cream2); font-size:0.95rem;">
             <input type="checkbox" class="cat-checkbox" value="${cat}" ${selected.includes(cat) ? 'checked' : ''} style="width:20px; height:20px;">
-            <span style="flex:1;">${cat}</span>
+            <span style="flex:1;">${catLabel}</span>
             <span style="color:var(--grey); font-size:0.82rem; white-space:nowrap;">${mastered}/${total}</span>
           </label>
         `;}).join('')}
       </div>
-      <button class="btn btn-primary" id="saveCategoriesBtn">Guardar y volver</button>
+      <button class="btn btn-primary" id="saveCategoriesBtn">${T.save}</button>
     </div>
   `;
   document.getElementById('selectAllBtn').onclick = () => {
@@ -2081,6 +2211,8 @@ function renderCard(){
 
   const colors = TYPE_COLORS[card.t] || {bg:"#eee", fg:"#333"};
   const isNoun = card.t === "Sustantivo";
+  const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
+  const catLabel = useDE ? (CATEGORY_DE[card.cat] || card.cat) : card.cat;
 
   const questionText = direction === "es-de" ? card.es : card.g;
   const questionSubtext = direction === "de-es" && card.info ? card.info : null;
@@ -2101,7 +2233,7 @@ function renderCard(){
             <span class="tag" style="color:${colors.fg}">${card.t}</span>
             <div class="word-main">${questionText}</div>
             ${questionSubtext ? `<div class="word-info">${questionSubtext}</div>` : ''}
-            <div class="word-cat">${card.cat}</div>
+            <div class="word-cat">${catLabel}</div>
           </div>
         </div>
       </div>
@@ -2164,6 +2296,8 @@ function renderChoiceCard(idx, card, direction){
   const colors = TYPE_COLORS[card.t] || {bg:"#eee", fg:"#333"};
   const questionText = direction === "es-de" ? card.es : card.g;
   const questionSubtext = direction === "de-es" && card.info ? card.info : null;
+  const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
+  const catLabel = useDE ? (CATEGORY_DE[card.cat] || card.cat) : card.cat;
   const { correct, options } = buildChoiceOptions(card, direction);
 
   app.innerHTML = `
@@ -2179,7 +2313,7 @@ function renderChoiceCard(idx, card, direction){
             <span class="tag" style="color:${colors.fg}">${card.t}</span>
             <div class="word-main">${questionText}</div>
             ${questionSubtext ? `<div class="word-info">${questionSubtext}</div>` : ''}
-            <div class="word-cat">${card.cat}</div>
+            <div class="word-cat">${catLabel}</div>
           </div>
         </div>
       </div>
