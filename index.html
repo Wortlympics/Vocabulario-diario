@@ -2500,6 +2500,8 @@ async function renderSummary(){
     ? '¡Ronda perfecta!'
     : (sessionCorrect >= sessionTotal * 0.7 ? '¡Sesión completada!' : 'Sesión completada — mañana mejor');
 
+  const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
+
   app.innerHTML = `
     <div class="card-surface" style="text-align:center;">
       <div style="font-size:3rem; margin-bottom:6px;">${headerEmoji}</div>
@@ -2524,9 +2526,12 @@ async function renderSummary(){
       </div>
 
       <button class="btn btn-primary" id="homeBtn">Volver al inicio</button>
+      ${mistakes.length > 0 ? `<button class="btn btn-no" id="reviewMistakesBtn" style="margin-top:10px;">${useDE ? `🔁 Fehler wiederholen (${mistakes.length})` : `🔁 Repasar fallos (${mistakes.length})`}</button>` : ''}
     </div>
   `;
   document.getElementById('homeBtn').onclick = renderHome;
+  const reviewMistakesBtn = document.getElementById('reviewMistakesBtn');
+  if(reviewMistakesBtn) reviewMistakesBtn.onclick = startMistakesSession;
   if(isPerfect) launchConfetti();
 }
 
