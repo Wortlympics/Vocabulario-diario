@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vocabulario</title>
+<title>Wortlympics</title>
 <style>
   :root{
     --cream:#FBF6EE; --cream2:#F3E9D8; --brown:#4A2E1F; --brown-light:#7A5240;
@@ -1051,12 +1051,22 @@ function grammarLangLabel(lang){
 function renderModeSelect(){
   app.innerHTML = `
     <div class="card-surface" style="text-align:center;">
-      <div style="font-size:2rem; margin-bottom:6px;">🧑‍🏫</div>
-      <h1 style="margin-bottom:4px;">Vocabulario Diario · Tägliches Vokabular</h1>
-      <div class="subtitle" style="margin-bottom:14px; font-style:italic; font-size:0.68rem; white-space:nowrap; overflow-x:auto;">"A journey of a thousand miles begins with a single step." — Lao Tzu</div>
+      <h1 style="margin-bottom:14px; margin-top:6px;">Wortlympics 🏅</h1>
+
+      <div style="margin:0 0 14px; padding:14px 14px; background:var(--cream2); border-radius:12px; text-align:left; font-size:0.88rem; line-height:1.55;">
+        <p style="margin:0 0 6px; font-weight:800; color:var(--brown);">🏅 ¡Bienvenidos a los Wortlympics!</p>
+        <p style="margin:0 0 6px;">Cada palabra que domináis os acerca al podio. Cada sesión cuenta, cada acierto suma y cada día de entrenamiento os hace más fuertes.</p>
+        <p style="margin:0 0 6px;">No hay excusas para saltarse el entrenamiento diario: los campeones no se hacen en un solo día, sino palabra a palabra.</p>
+        <p style="margin:0 0 10px;">No hace falta ser un genio de los idiomas. Solo constancia, ganas de aprender... y un poco de suerte para conseguir la recompensa final. ¡Que empiecen los Wortlympics!</p>
+        <p style="margin:10px 0 4px; font-weight:800; color:var(--grey); font-size:0.8rem;">🇩🇪 Deutsch</p>
+        <p style="margin:0 0 6px; color:var(--grey); font-size:0.82rem;"><b>🏅 Willkommen bei den Wortlympics!</b></p>
+        <p style="margin:0 0 6px; color:var(--grey); font-size:0.82rem;">Hier bringt euch jedes gemeisterte Wort dem Podium ein Stück näher. Jede Trainingseinheit zählt, jeder Erfolg bringt Punkte und jeder Tag macht euch stärker.</p>
+        <p style="margin:0 0 6px; color:var(--grey); font-size:0.82rem;">Keine Ausreden fürs Auslassen des täglichen Trainings – Champions werden nicht an einem Tag gemacht, sondern Wort für Wort.</p>
+        <p style="margin:0; color:var(--grey); font-size:0.82rem;">Man muss kein Sprachgenie sein. Alles, was zählt, ist Ausdauer, Lernfreude ... und ein bisschen Glück, um die letzte Belohnung zu ergattern. Auf die Plätze, fertig, los – die Wortlympics beginnen!</p>
+      </div>
 
       <button id="onboardingToggle" style="background:none; border:none; color:var(--amber-dark); font-size:0.88rem; font-weight:700; cursor:pointer; padding:4px;">
-        📖 Instrucciones · Anleitung
+        Reglas · Regeln
       </button>
       <div id="onboardingContent" style="display:none; text-align:left; margin-top:14px; padding-top:14px; border-top:1px solid var(--cream2); font-size:0.9rem; line-height:1.6;">
         <p style="margin:0 0 4px;"><b>📚 Repetición espaciada / Spaced repetition</b><br>
@@ -1078,6 +1088,14 @@ function renderModeSelect(){
         <p style="margin:14px 0 4px;"><b>☁️ Progreso del equipo</b><br>
         En la pantalla inicial ves la racha y las palabras dominadas de todos, sincronizadas automáticamente. Desde el repaso, el icono 🏠 arriba te lleva de vuelta ahí.<br>
         <span style="color:var(--grey); font-size:0.82rem;">Auf dem Startbildschirm siehst du die Serie und die gemeisterten Wörter aller — automatisch synchronisiert.</span></p>
+
+        <p style="margin:14px 0 4px;"><b>🥇 Medallas del mes</b><br>
+        Cada mes, quienes más palabras dominen ese mes (no en total) reciben 🥇🥈🥉 junto a su nombre — se reinicia solo cada mes, para que todos empecéis en igualdad de condiciones.<br>
+        <span style="color:var(--grey); font-size:0.82rem;">Jeden Monat erhalten die drei Besten (nach in diesem Monat gemeisterten Wörtern, nicht insgesamt) eine Medaille — der Zähler setzt sich jeden Monat automatisch zurück.</span></p>
+
+        <p style="margin:14px 0 4px;"><b>🏅 Wortlympics — el medallero del año</b><br>
+        Cada medalla mensual que ganas se guarda para siempre. El botón "Ver medallero del año" en la pantalla inicial muestra cuántos oros, platas y bronces lleva cada uno acumulados, como en unas olimpiadas de verdad.<br>
+        <span style="color:var(--grey); font-size:0.82rem;">Jede monatliche Medaille wird dauerhaft gespeichert. Der Button "Jahresmedaillenspiegel" zeigt, wie viele Gold-, Silber- und Bronzemedaillen jeder insgesamt gesammelt hat.</span></p>
       </div>
     </div>
 
@@ -1095,6 +1113,10 @@ function renderModeSelect(){
         </div>
       </div>
     `).join('')}
+
+    <div class="card-surface" id="goMedals" style="cursor:pointer; text-align:center;">
+      <span style="font-weight:700; color:var(--brown);">🏅 Ver medallero del año</span>
+    </div>
   `;
   document.getElementById('onboardingToggle').onclick = () => {
     const el = document.getElementById('onboardingContent');
@@ -1103,6 +1125,7 @@ function renderModeSelect(){
   document.querySelectorAll('.landing-card').forEach(card => {
     card.onclick = () => renderPasswordGate(card.dataset.profile);
   });
+  document.getElementById('goMedals').onclick = renderMedalTable;
   loadLandingStats();
 }
 
@@ -1212,11 +1235,110 @@ async function goToProfile(p){
   }
 }
 
+// ---------- Medallero: cumulative gold/silver/bronze from monthly history ----------
+function computeMedalTable(cloudData){
+  const mk = currentMonthKey();
+  const monthsSeen = new Set();
+  Object.keys(PROFILES).forEach(p => {
+    const d = cloudData && cloudData[p];
+    if(d && d.monthlyHistory){
+      Object.keys(d.monthlyHistory).forEach(m => monthsSeen.add(m));
+    }
+  });
+  // Only fully completed months count — the current month is still in progress.
+  const completedMonths = [...monthsSeen].filter(m => m < mk).sort();
+
+  const tally = {};
+  Object.keys(PROFILES).forEach(p => { tally[p] = {gold:0, silver:0, bronze:0}; });
+
+  completedMonths.forEach(month => {
+    const ranked = Object.keys(PROFILES)
+      .map(p => {
+        const d = cloudData && cloudData[p];
+        const val = (d && d.monthlyHistory && d.monthlyHistory[month]) || 0;
+        return {p, val};
+      })
+      .filter(x => x.val > 0)
+      .sort((a,b) => b.val - a.val);
+    if(ranked[0]) tally[ranked[0].p].gold++;
+    if(ranked[1]) tally[ranked[1].p].silver++;
+    if(ranked[2]) tally[ranked[2].p].bronze++;
+  });
+
+  return { tally, completedMonths };
+}
+
+async function renderMedalTable(){
+  app.innerHTML = `
+    <div class="card-surface">
+      <button class="btn btn-outline" id="backFromMedalsBtn" style="margin-bottom:0;">← Volver</button>
+    </div>
+    <div class="card-surface"><div class="empty-state">Cargando...</div></div>
+  `;
+  document.getElementById('backFromMedalsBtn').onclick = renderModeSelect;
+
+  const cloudData = await cloudFetch();
+  const { tally, completedMonths } = computeMedalTable(cloudData);
+  const rows = Object.keys(PROFILES)
+    .map(p => ({ p, ...tally[p], total: tally[p].gold + tally[p].silver + tally[p].bronze }))
+    .sort((a,b) =>
+      b.gold - a.gold ||
+      b.silver - a.silver ||
+      b.bronze - a.bronze ||
+      PROFILES[a.p].name.localeCompare(PROFILES[b.p].name, 'es') // alphabetical tiebreak (e.g. all at zero)
+    );
+
+  const box = app.querySelector('.card-surface:last-child');
+
+  box.innerHTML = `
+    <h1 style="margin-bottom:14px;">🏅 Medallero</h1>
+    <div style="display:grid; grid-template-columns: 24px 1fr 32px 32px 32px 40px; gap:4px 8px; align-items:center;">
+      <div></div>
+      <div></div>
+      <div style="text-align:center; font-size:1.1rem;">🥇</div>
+      <div style="text-align:center; font-size:1.1rem;">🥈</div>
+      <div style="text-align:center; font-size:1.1rem;">🥉</div>
+      <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--grey);">TOTAL</div>
+
+      ${rows.map((r, i) => `
+        <div style="text-align:center; font-size:0.85rem; color:var(--grey); font-weight:700;">${i+1}</div>
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--cream2);">
+          <span style="font-size:1.3rem;">${PROFILES[r.p].avatar}</span>
+          <span style="font-weight:700; color:var(--brown); font-size:0.92rem;">${PROFILES[r.p].name}</span>
+        </div>
+        <div style="text-align:center; font-weight:700; border-top:1px solid var(--cream2); padding:8px 0;">${r.gold}</div>
+        <div style="text-align:center; font-weight:700; border-top:1px solid var(--cream2); padding:8px 0;">${r.silver}</div>
+        <div style="text-align:center; font-weight:700; border-top:1px solid var(--cream2); padding:8px 0;">${r.bronze}</div>
+        <div style="text-align:center; font-weight:800; color:var(--amber-dark); border-top:1px solid var(--cream2); padding:8px 0;">${r.total}</div>
+      `).join('')}
+    </div>
+  `;
+}
+
 async function loadLandingStats(){
   const cloudData = await cloudFetch();
   const mk = currentMonthKey();
+  const medals = ['🥇', '🥈', '🥉'];
+
+  function monthlyMasteredCount(p){
+    if(!cloudData || !cloudData[p]) return -1;
+    const d = cloudData[p];
+    if(d.monthKey !== mk) return 0; // stale from a previous month until they resync
+    return d.monthlyMastered || 0;
+  }
+
+  // Only the top 3 get a medal — no full ranking, so nobody sees themselves as "last"
+  const ranked = Object.keys(PROFILES)
+    .map(p => ({ p, monthly: monthlyMasteredCount(p) }))
+    .filter(x => x.monthly > 0)
+    .sort((a, b) => b.monthly - a.monthly);
+  const medalFor = {};
+  ranked.forEach((x, i) => { if(i < 3) medalFor[x.p] = medals[i]; });
 
   Object.keys(PROFILES).forEach(p => {
+    const nameEl = document.querySelector(`.landing-name-${p}`);
+    if(nameEl) nameEl.textContent = (medalFor[p] ? medalFor[p] + ' ' : '') + PROFILES[p].name;
+
     const el = document.querySelector(`.landing-stats-${p}`);
     if(!el) return; // user already navigated away
     if(!cloudData || !cloudData[p]){
@@ -1431,6 +1553,11 @@ function currentMonthKey(){
 }
 function ensureMonthlyReset(s){
   const mk = currentMonthKey();
+  if(!s.monthlyHistory) s.monthlyHistory = {};
+  if(s.monthKey && s.monthKey !== mk){
+    // Archive the month that just ended so the medal table can use it later.
+    s.monthlyHistory[s.monthKey] = s.monthlyMastered || 0;
+  }
   if(s.monthKey !== mk){
     s.monthKey = mk;
     s.monthlyMastered = 0;
@@ -1442,11 +1569,11 @@ function ensureMonthlyReset(s){
 async function loadStreak(){
   try{
     const raw = localStorage.getItem(profileKey('streak'));
-    const parsed = raw ? JSON.parse(raw) : {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:null};
+    const parsed = raw ? JSON.parse(raw) : {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:null, monthlyHistory:{}};
     if(typeof parsed.totalReviews !== 'number') parsed.totalReviews = 0;
     ensureMonthlyReset(parsed);
     return parsed;
-  }catch(e){ return {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:currentMonthKey()}; }
+  }catch(e){ return {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:currentMonthKey(), monthlyHistory:{}}; }
 }
 async function saveStreak(s){
   try{ localStorage.setItem(profileKey('streak'), JSON.stringify(s)); }catch(e){}
@@ -1520,6 +1647,7 @@ async function syncProfileToCloud(){
     totalReviews: streak.totalReviews || 0,
     monthlyMastered: streak.monthlyMastered || 0,
     monthKey: streak.monthKey || currentMonthKey(),
+    monthlyHistory: streak.monthlyHistory || {},
     progress: progress,
     mistakes: mistakes,
     updatedAt: new Date().toISOString(),
@@ -1532,7 +1660,7 @@ async function pullProfileFromCloud(){
   if(cloudData && cloudData[currentProfile]){
     const remote = cloudData[currentProfile];
     progress = remote.progress || {};
-    streak = {current: remote.streak||0, longest: remote.longest||0, lastDate: remote.lastDate||null, history: remote.history||{}, totalReviews: remote.totalReviews||0, monthlyMastered: remote.monthlyMastered||0, monthKey: remote.monthKey||null};
+    streak = {current: remote.streak||0, longest: remote.longest||0, lastDate: remote.lastDate||null, history: remote.history||{}, totalReviews: remote.totalReviews||0, monthlyMastered: remote.monthlyMastered||0, monthKey: remote.monthKey||null, monthlyHistory: remote.monthlyHistory||{}};
     ensureMonthlyReset(streak);
     mistakes = remote.mistakes || [];
     await saveProgress(progress);
@@ -1559,7 +1687,7 @@ function addDays(dateStr, n){
 
 // ---------- App State ----------
 let progress = {};
-let streak = {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:null};
+let streak = {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:null, monthlyHistory:{}};
 let sessionQueue = [];
 let sessionIndex = 0;
 let sessionCorrect = 0;
@@ -2277,7 +2405,7 @@ function confirmReset(){
 
 async function doReset(){
   progress = {};
-  streak = {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:null};
+  streak = {current:0, longest:0, lastDate:null, history:{}, totalReviews:0, monthlyMastered:0, monthKey:null, monthlyHistory:{}};
   mistakes = [];
   await saveProgress(progress);
   await saveStreak(streak);
