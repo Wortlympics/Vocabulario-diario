@@ -1713,9 +1713,40 @@ async function pullProfileFromCloud(){
     await saveProgress(progress);
     await saveStreak(streak);
     saveMistakes(mistakes);
-    return true;
   }
-  return false;
+  // Custom words (Javi/M.Pilar's manually added extra vocabulary) live under a
+  // shared key in the same bin, separate from any single profile's data.
+  if(currentProfile === 'Javi' || currentProfile === 'Pilar'){
+    if(cloudData && Array.isArray(cloudData._customWords)){
+      CUSTOM_WORDS = cloudData._customWords;
+      saveCustomWordsLocal(CUSTOM_WORDS);
+    } else {
+      CUSTOM_WORDS = loadCustomWordsLocal();
+    }
+  }
+  return !!(cloudData && cloudData[currentProfile]);
+}
+
+function loadCustomWordsLocal(){
+  try{
+    const raw = localStorage.getItem('aleman_custom_words');
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveCustomWordsLocal(words){
+  try{ localStorage.setItem('aleman_custom_words', JSON.stringify(words)); }catch(e){}
+}
+async function pushCustomWordsToCloud(){
+  const cloudData = await cloudFetch();
+  if(cloudData === null) return false; // don't wipe the bin on a failed fetch
+  cloudData._customWords = CUSTOM_WORDS;
+  return await cloudPush(cloudData);
+}
+async function addCustomWord(word){
+  word.idx = DECK.length + CUSTOM_WORDS.length;
+  CUSTOM_WORDS.push(word);
+  saveCustomWordsLocal(CUSTOM_WORDS);
+  await pushCustomWordsToCloud();
 }
 
 function todayStr(){
@@ -1819,16 +1850,22 @@ function greetingByHour(){
   return {emoji: p.greetingEmoji.night, text:`Buenas noches, ${name}`};
 }
 
+let CUSTOM_WORDS = []; // shared extra words added by Javi/M.Pilar
+function getDeck(){
+  return (currentProfile === 'Javi' || currentProfile === 'Pilar') ? DECK.concat(CUSTOM_WORDS) : DECK;
+}
+
 function getFilteredIndices(){
+  const deck = getDeck();
   const catAll = !selectedCategories || selectedCategories.length === 0 || selectedCategories.length === ALL_CATEGORIES.length;
   const lvlAll = !selectedLevels || selectedLevels.length === 0 || selectedLevels.length === ALL_LEVELS.length;
   if(catAll && lvlAll){
-    return DECK.map((_, idx) => idx);
+    return deck.map((_, idx) => idx);
   }
   const catSet = catAll ? null : new Set(selectedCategories);
   const lvlSet = lvlAll ? null : new Set(selectedLevels);
   const out = [];
-  DECK.forEach((card, idx) => {
+  deck.forEach((card, idx) => {
     if(catSet && !catSet.has(card.cat)) return;
     if(lvlSet && !lvlSet.has(card.lvl)) return;
     out.push(idx);
@@ -1853,8 +1890,9 @@ function getDueCards(){
   const indices = getFilteredIndices();
   const due = [];
   const fresh = [];
+  const deck = getDeck();
   indices.forEach(idx=>{
-    const card = DECK[idx];
+    const card = deck[idx];
     const st = progress[idx];
     if(!st){ fresh.push(idx); }
     else if(st.due <= today){ due.push(idx); }
@@ -1919,6 +1957,8 @@ function renderHome(){
 
   // Heiko and Ben are true Spanish beginners — their day-to-day screen is in German.
   const useDE = currentProfile === 'Heiko' || currentProfile === 'Ben';
+  const currentYM = todayStr().slice(0, 7); // "YYYY-MM"
+  const daysThisMonth = Object.entries(streak.history || {}).filter(([date, n]) => date.startsWith(currentYM) && n > 0).length;
   const T = useDE ? {
     backHome: "Zurück zum Start",
     startBtn: "Übung starten",
@@ -1972,6 +2012,7 @@ function renderHome(){
         <div class="stat-box">
           <div class="stat-num"><span class="icon-flame">🔥</span>${streak.current}</div>
           <div class="stat-label">${T.streakLabel}</div>
+          <div style="font-size:0.68rem; color:var(--grey); margin-top:2px;">${useDE ? `${daysThisMonth} Tage diesen Monat` : `${daysThisMonth} días este mes`}</div>
         </div>
         <div class="stat-box">
           <div class="stat-num">${due.length}</div>
@@ -1997,7 +2038,8 @@ function renderHome(){
 
     <div class="card-surface">
       <button class="btn btn-outline" id="categoriesBtn" style="margin-bottom:10px;">${T.categories}${catCount}</button>
-      <button class="btn btn-outline" id="masteredListBtn" style="margin-bottom:0;">${T.masteredList(mastered)}</button>
+      <button class="btn btn-outline" id="masteredListBtn" style="${(currentProfile === 'Javi' || currentProfile === 'Pilar') ? 'margin-bottom:10px;' : 'margin-bottom:0;'}">${T.masteredList(mastered)}</button>
+      ${(currentProfile === 'Javi' || currentProfile === 'Pilar') ? `<button class="btn btn-outline" id="addWordBtn" style="margin-bottom:0;">➕ Añadir palabra</button>` : ''}
     </div>
 
     ${mistakes.length > 0 ? `
@@ -2015,6 +2057,8 @@ function renderHome(){
   wireRewardIcons();
   document.getElementById('categoriesBtn').onclick = renderCategories;
   document.getElementById('masteredListBtn').onclick = renderMasteredWords;
+  const addWordBtn = document.getElementById('addWordBtn');
+  if(addWordBtn) addWordBtn.onclick = renderAddWordForm;
   const mistakesBtn = document.getElementById('mistakesBtn');
   if(mistakesBtn) mistakesBtn.onclick = startMistakesSession;
   const startBtn = document.getElementById('startBtn');
@@ -2038,7 +2082,7 @@ async function switchProfile(p){
 
 function categoryStats(cat){
   let total = 0, mastered = 0;
-  DECK.forEach((card, idx) => {
+  getDeck().forEach((card, idx) => {
     if(card.cat === cat){
       total++;
       const st = progress[idx];
@@ -2048,11 +2092,102 @@ function categoryStats(cat){
   return {mastered, total};
 }
 
+function renderAddWordForm(){
+  app.innerHTML = `
+    <div class="card-surface">
+      <button class="btn btn-outline" id="backFromAddWordBtn" style="margin-bottom:14px;">← Volver</button>
+      <h1 style="margin-bottom:4px;">➕ Añadir palabra</h1>
+      <div class="subtitle">La verá también ${currentProfile === 'Javi' ? 'M. Pilar' : 'Javi'} — se suma al repaso normal de ambos.</div>
+
+      <label style="display:block; font-weight:700; color:var(--brown); font-size:0.85rem; margin:14px 0 4px;">Palabra en alemán</label>
+      <input type="text" id="newWordDE" placeholder="p. ej. der Schlüssel" autocomplete="off"
+        style="width:100%; padding:12px; font-size:1rem; border-radius:12px; border:2px solid var(--cream2);">
+      <div id="dictCheckStatus" style="font-size:0.78rem; margin-top:4px; min-height:16px;"></div>
+
+      <label style="display:block; font-weight:700; color:var(--brown); font-size:0.85rem; margin:14px 0 4px;">Nota opcional (plural, aclaración...)</label>
+      <input type="text" id="newWordInfo" placeholder="p. ej. die Schlüssel" autocomplete="off"
+        style="width:100%; padding:12px; font-size:1rem; border-radius:12px; border:2px solid var(--cream2);">
+
+      <label style="display:block; font-weight:700; color:var(--brown); font-size:0.85rem; margin:14px 0 4px;">Traducción en español</label>
+      <input type="text" id="newWordES" placeholder="p. ej. la llave" autocomplete="off"
+        style="width:100%; padding:12px; font-size:1rem; border-radius:12px; border:2px solid var(--cream2);">
+
+      <label style="display:block; font-weight:700; color:var(--brown); font-size:0.85rem; margin:14px 0 4px;">Categoría</label>
+      <select id="newWordCat" style="width:100%; padding:12px; font-size:1rem; border-radius:12px; border:2px solid var(--cream2); background:var(--white);">
+        ${ALL_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+
+      <label style="display:block; font-weight:700; color:var(--brown); font-size:0.85rem; margin:14px 0 4px;">Nivel</label>
+      <select id="newWordLvl" style="width:100%; padding:12px; font-size:1rem; border-radius:12px; border:2px solid var(--cream2); background:var(--white); margin-bottom:16px;">
+        ${ALL_LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
+      </select>
+
+      <div id="addWordError" style="color:var(--red); font-size:0.85rem; display:none; margin-bottom:10px;"></div>
+      <button class="btn btn-primary" id="saveNewWordBtn">Añadir palabra</button>
+    </div>
+  `;
+  document.getElementById('backFromAddWordBtn').onclick = renderHome;
+
+  let dictCheckTimer = null;
+  document.getElementById('newWordDE').addEventListener('input', (e) => {
+    clearTimeout(dictCheckTimer);
+    const statusEl = document.getElementById('dictCheckStatus');
+    const raw = e.target.value.trim();
+    // strip a leading German article (der/die/das) before checking, so "der Schlüssel" looks up "Schlüssel"
+    const word = raw.replace(/^(der|die|das)\s+/i, '').trim();
+    if(!word){ statusEl.textContent = ''; return; }
+    statusEl.style.color = 'var(--grey)';
+    statusEl.textContent = 'Comprobando en el diccionario...';
+    dictCheckTimer = setTimeout(() => checkWordInDictionary(word, statusEl), 600);
+  });
+
+  document.getElementById('saveNewWordBtn').onclick = async () => {
+    const g = document.getElementById('newWordDE').value.trim();
+    const info = document.getElementById('newWordInfo').value.trim();
+    const es = document.getElementById('newWordES').value.trim();
+    const cat = document.getElementById('newWordCat').value;
+    const lvl = document.getElementById('newWordLvl').value;
+    const err = document.getElementById('addWordError');
+    if(!g || !es){
+      err.textContent = 'Rellena al menos la palabra en alemán y la traducción en español.';
+      err.style.display = 'block';
+      return;
+    }
+    const saveBtn = document.getElementById('saveNewWordBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+    await addCustomWord({ g, info: info || null, es, cat, t: "Sustantivo", lvl });
+    renderHome();
+  };
+}
+
+async function checkWordInDictionary(word, statusEl){
+  try{
+    const res = await fetch(`https://freedictionaryapi.com/api/v1/entries/de/${encodeURIComponent(word)}`);
+    if(res.ok){
+      const data = await res.json();
+      if(data && data.entries && data.entries.length > 0){
+        statusEl.style.color = 'var(--green)';
+        statusEl.textContent = '✓ Encontrada en el diccionario';
+      } else {
+        statusEl.style.color = 'var(--amber-dark)';
+        statusEl.textContent = '⚠️ No encontrada — revisa que esté bien escrita (puedes añadirla igualmente)';
+      }
+    } else {
+      statusEl.style.color = 'var(--amber-dark)';
+      statusEl.textContent = '⚠️ No encontrada — revisa que esté bien escrita (puedes añadirla igualmente)';
+    }
+  }catch(e){
+    statusEl.textContent = ''; // silently give up if the dictionary service is unreachable
+  }
+}
+
 function renderMasteredWords(){
   const direction = PROFILES[currentProfile].direction;
+  const deck = getDeck();
   const masteredEntries = Object.entries(progress)
     .filter(([idx, s]) => s.box >= 4)
-    .map(([idx, s]) => ({ idx: Number(idx), card: DECK[Number(idx)] }))
+    .map(([idx, s]) => ({ idx: Number(idx), card: deck[Number(idx)] }))
     .filter(x => x.card); // guard against stale indices
 
   // Group by category for easier scanning
@@ -2206,7 +2341,7 @@ function renderCard(){
     return;
   }
   const idx = sessionQueue[sessionIndex];
-  const card = DECK[idx];
+  const card = getDeck()[idx];
   const direction = PROFILES[currentProfile].direction; // 'es-de' or 'de-es'
 
   if(sessionMode === 'choice'){
